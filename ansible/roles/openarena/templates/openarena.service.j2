@@ -1,0 +1,27 @@
+# systemd Service Unit for OpenArena Dedicated Server
+# This service will automatically start OpenArena on boot and restart it if it crashes
+
+[Unit]
+Description=OpenArena Dedicated Server
+# Wait for network to be online before starting
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Simple service type (not forking)
+Type=simple
+# Run as root (OpenArena typically requires root for network binding)
+User=root
+# Command to start the server
+# dedicated 2 = Internet server mode
+# exec loads the server configuration file
+# Note: Path may need adjustment based on OpenArena installation location
+ExecStart=/opt/openarena-0.8.8/oa_ded.x86_64 +set dedicated {{ oa_dedicated }} +exec {{ oa_cfg_file }}
+# Automatically restart if the server crashes
+Restart=always
+# Wait 3 seconds before restarting
+RestartSec=3
+
+[Install]
+# Start this service when the system reaches multi-user.target (normal boot)
+WantedBy=multi-user.target

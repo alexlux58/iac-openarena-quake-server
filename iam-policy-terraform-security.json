@@ -1,0 +1,59 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "IAMRoleManagement",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:GetRole",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:CreateInstanceProfile",
+        "iam:DeleteInstanceProfile",
+        "iam:AddRoleToInstanceProfile",
+        "iam:RemoveRoleFromInstanceProfile",
+        "iam:PassRole",
+        "iam:TagRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::026600053230:role/openarena-*",
+        "arn:aws:iam::026600053230:instance-profile/openarena-*"
+      ]
+    },
+    {
+      "Sid": "KMSManagement",
+      "Effect": "Allow",
+      "Action": [
+        "kms:CreateKey",
+        "kms:DescribeKey",
+        "kms:TagResource",
+        "kms:UntagResource",
+        "kms:EnableKeyRotation",
+        "kms:ScheduleKeyDeletion",
+        "kms:PutKeyPolicy",
+        "kms:CreateAlias",
+        "kms:DeleteAlias"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "GuardDutyManagement",
+      "Effect": "Allow",
+      "Action": [
+        "guardduty:CreateDetector",
+        "guardduty:DeleteDetector",
+        "guardduty:GetDetector",
+        "guardduty:UpdateDetector",
+        "guardduty:TagResource",
+        "guardduty:UntagResource",
+        "guardduty:CreatePublishingDestination",
+        "guardduty:DeletePublishingDestination"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

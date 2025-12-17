@@ -1,0 +1,92 @@
+# Alex Lux - OpenArena AWS Configuration
+# Copy this to terraform.tfvars to use
+# cp terraform.tfvars.ALEXLUX terraform.tfvars
+
+# ============================================================================
+# AWS CONFIGURATION
+# ============================================================================
+
+aws_region     = "us-west-2"
+instance_type  = "t2.micro"  # Free tier eligible
+
+# SSH Configuration - UPDATE THESE!
+ssh_key_name   = "openarena-key"  # New key pair name
+create_key_pair = true             # Create a new SSH key pair
+ssh_public_key_file = "~/.ssh/id_rsa.pub"
+ssh_allowed_cidr   = "23.242.22.13/32"  # Your public IP for security
+
+# ============================================================================
+# CLOUDFLARE CONFIGURATION (Optional - for custom DNS)
+# ============================================================================
+
+# For security, use CLOUDFLARE_API_TOKEN environment variable instead
+# cloudflare_api_token = ""  # Leave empty if using env var
+cloudflare_zone_id     = "your-zone-id-here"
+cloudflare_zone_name   = "yourdomain.com"
+cloudflare_subdomain   = "quake"
+cloudflare_ttl         = 300
+
+# ============================================================================
+# COST MONITORING CONFIGURATION
+# ============================================================================
+
+# S3 Bucket Names (pre-configured with your AWS account ID: 026600053230)
+log_bucket_name     = "alexflux-audit-logs-026600053230"
+flowlog_bucket_name = "alexflux-flowlogs-026600053230"
+cur_bucket_name     = "alexflux-cur-026600053230"
+
+# Your email for cost alerts
+billing_alert_email = "alexlux@live.com"
+
+# Budget thresholds in USD
+monthly_budget_usd     = 15    # Monthly budget limit
+billing_alarm_usd      = 20    # Failsafe alarm threshold (set higher than budget)
+anomaly_threshold_usd  = 5     # Minimum $ for anomaly alerts
+
+# ============================================================================
+# FEATURE TOGGLES (Cost Optimization)
+# ============================================================================
+
+# Security Logging Features
+enable_cloudtrail      = true   # FREE (first trail) - Recommended: true
+enable_guardduty       = false  # $10/month - Set to false to SAVE MONEY
+enable_vpc_flow_logs   = false  # $3/month - Set to false to SAVE MONEY
+enable_cloudwatch_logs = false  # $1.50/month - Set to false to SAVE MONEY
+
+# Cost Monitoring Features (All FREE - Keep Enabled)
+enable_cost_budgets            = true  # FREE (first 2 budgets)
+enable_cost_anomaly_detection  = true  # FREE
+enable_billing_alarm           = true  # FREE (first 10 alarms)
+enable_cur                     = true  # FREE (only S3 storage)
+
+# ============================================================================
+# DEPLOYMENT NOTES FOR ALEX
+# ============================================================================
+#
+# Before deploying:
+# 1. Update ssh_key_name to your existing AWS key pair name
+#    OR set create_key_pair = true to create a new one
+#
+# 2. (Recommended) Change ssh_allowed_cidr to your public IP:
+#    - Find your IP: curl ifconfig.me
+#    - Set: ssh_allowed_cidr = "YOUR_IP/32"
+#
+# 3. (Optional) If using Cloudflare:
+#    - Set cloudflare_zone_id and cloudflare_zone_name
+#    - Set CLOUDFLARE_API_TOKEN environment variable
+#
+# Deploy:
+#   cd /Users/alex.lux/Desktop/AWS/openarena-aws/terraform
+#   cp terraform.tfvars.ALEXLUX terraform.tfvars
+#   terraform init
+#   terraform apply
+#
+# Post-deployment:
+#   1. Check email (alexlux@live.com) for SNS confirmations
+#   2. Click "Confirm subscription" in both emails
+#   3. Enable billing alerts: https://console.aws.amazon.com/billing/home#/preferences
+#
+# Expected monthly cost: ~$11 with current settings
+#
+# See ../DEPLOYMENT_GUIDE.md for detailed instructions
+# ============================================================================

@@ -1,0 +1,54 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Sensitive files
+*.pem
+*.key
+*.p12
+*.pfx
+terraform.pub
+secrets/
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backups and temporary files
+*.backup
+*.bak
+*.tmp
+*~
+*.orig
+.*.swp
+
+# Ansible generated files
+ansible/inventory/hosts.ini
+ansible/files/openarena-*.zip
+
+# Local game client files
+openarena-client/
+*.command
+
+# Documentation drafts
+*_DRAFT.md
+*_OLD.md
+

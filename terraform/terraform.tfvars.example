@@ -1,0 +1,82 @@
+# Example Terraform variables file
+# Copy this to terraform.tfvars and fill in your values
+# terraform.tfvars is gitignored and should NEVER be committed
+
+# ============================================================================
+# AWS CONFIGURATION
+# ============================================================================
+
+aws_region     = "us-west-2"
+instance_type  = "t2.micro"  # Free tier eligible
+ssh_key_name   = "my-key-pair"
+create_key_pair = false
+ssh_public_key_file = "~/.ssh/id_rsa.pub"
+ssh_allowed_cidr   = "23.242.22.13/32"  # Your public IP for security
+
+# ============================================================================
+# CLOUDFLARE CONFIGURATION (Optional - for custom DNS)
+# ============================================================================
+# Skip this section if you don't use Cloudflare DNS
+# The server will still work with just the IP address
+
+# For security, use CLOUDFLARE_API_TOKEN environment variable instead
+# Set: export CLOUDFLARE_API_TOKEN="your-token"
+# cloudflare_api_token = ""  # Leave empty if using env var
+
+# How to find your Zone ID:
+# 1. Go to https://dash.cloudflare.com
+# 2. Click "Domains" tab, then select your domain
+# 3. Scroll to "API" section on right sidebar
+# 4. Copy the "Zone ID" (looks like: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6)
+#
+# IMPORTANT: If you're NOT using Cloudflare DNS, leave these empty:
+cloudflare_zone_id     = ""  # Leave empty to skip Cloudflare DNS
+cloudflare_zone_name   = ""  # Leave empty to skip Cloudflare DNS
+cloudflare_subdomain   = "quake"               # Only used if zone_id/zone_name are set
+cloudflare_ttl         = 300                   # DNS cache TTL in seconds
+
+# ============================================================================
+# COST MONITORING CONFIGURATION
+# ============================================================================
+
+# S3 Bucket Names (must be globally unique - include your AWS account ID)
+# Get your account ID: aws sts get-caller-identity --query Account --output text
+log_bucket_name     = "alexflux-audit-logs-123456789012"      # CHANGE 123456789012 to your account ID
+flowlog_bucket_name = "alexflux-flowlogs-123456789012"        # CHANGE 123456789012 to your account ID
+cur_bucket_name     = "alexflux-cur-123456789012"             # CHANGE 123456789012 to your account ID
+
+# Email for cost alerts (YOU MUST CONFIRM SNS SUBSCRIPTION AFTER DEPLOYMENT!)
+billing_alert_email = "your-email@example.com"  # CHANGE THIS!
+
+# Budget thresholds in USD
+monthly_budget_usd     = 15    # Monthly budget limit
+billing_alarm_usd      = 20    # Failsafe alarm threshold (set higher than budget)
+anomaly_threshold_usd  = 5     # Minimum $ for anomaly alerts
+
+# ============================================================================
+# FEATURE TOGGLES (Cost Optimization)
+# ============================================================================
+
+# Security Logging Features
+enable_cloudtrail      = true   # FREE (first trail) - Recommended: true
+enable_guardduty       = false  # $10/month - Set to false to SAVE MONEY
+enable_vpc_flow_logs   = false  # $3/month - Set to false to SAVE MONEY
+enable_cloudwatch_logs = false  # $1.50/month - Set to false to SAVE MONEY
+
+# Cost Monitoring Features (All FREE - Keep Enabled)
+enable_cost_budgets            = true  # FREE (first 2 budgets)
+enable_cost_anomaly_detection  = true  # FREE
+enable_billing_alarm           = true  # FREE (first 10 alarms)
+enable_cur                     = true  # FREE (only S3 storage)
+
+# ============================================================================
+# COST SUMMARY
+# ============================================================================
+# With defaults above (GuardDuty/FlowLogs/CWLogs disabled):
+#   Monthly cost: ~$11/month
+#
+# With all features enabled (change false to true above):
+#   Monthly cost: ~$25/month
+#
+# See DEPLOYMENT_GUIDE.md for detailed cost breakdown and savings strategies
+# ============================================================================

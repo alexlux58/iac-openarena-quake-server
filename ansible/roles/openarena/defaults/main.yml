@@ -1,0 +1,31 @@
+---
+# OpenArena Server Configuration Defaults
+# These values can be overridden in playbooks or inventory files
+
+# Server display name shown to players
+oa_sv_hostname: "OpenArena on AWS"
+
+# Maximum number of players allowed on the server
+oa_max_clients: 8
+
+# Game type: 0=Free For All, 1=Tournament, 2=Single Player, 3=Team Deathmatch, 4=Capture The Flag
+oa_gametype: 0
+
+# Time limit in minutes (0 = no time limit)
+oa_timelimit: 15
+
+# Frag limit (0 = no frag limit)
+oa_fraglimit: 20
+
+# Network port for the game server (UDP)
+oa_net_port: 27960
+
+# Starting map
+oa_map: "oa_dm1"
+
+# Dedicated server level: 1=LAN, 2=Internet
+oa_dedicated: 2
+
+# Configuration file paths
+oa_cfg_dir: /etc/openarena
+oa_cfg_file: /etc/openarena/server.cfg

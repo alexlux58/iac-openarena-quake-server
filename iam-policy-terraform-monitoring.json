@@ -1,0 +1,54 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SNSManagement",
+      "Effect": "Allow",
+      "Action": [
+        "sns:CreateTopic",
+        "sns:DeleteTopic",
+        "sns:GetTopicAttributes",
+        "sns:SetTopicAttributes",
+        "sns:Subscribe",
+        "sns:Unsubscribe",
+        "sns:TagResource",
+        "sns:UntagResource"
+      ],
+      "Resource": "arn:aws:sns:*:026600053230:openarena-*"
+    },
+    {
+      "Sid": "CostReporting",
+      "Effect": "Allow",
+      "Action": [
+        "cur:PutReportDefinition",
+        "cur:DeleteReportDefinition",
+        "cur:DescribeReportDefinitions",
+        "cur:ModifyReportDefinition"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "BudgetsManagement",
+      "Effect": "Allow",
+      "Action": [
+        "budgets:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CostExplorerAnomalyDetection",
+      "Effect": "Allow",
+      "Action": [
+        "ce:CreateAnomalyMonitor",
+        "ce:DeleteAnomalyMonitor",
+        "ce:GetAnomalyMonitors",
+        "ce:UpdateAnomalyMonitor",
+        "ce:CreateAnomalySubscription",
+        "ce:DeleteAnomalySubscription",
+        "ce:GetAnomalySubscriptions",
+        "ce:UpdateAnomalySubscription"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

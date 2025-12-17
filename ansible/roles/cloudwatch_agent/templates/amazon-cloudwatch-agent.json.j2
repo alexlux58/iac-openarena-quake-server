@@ -1,0 +1,163 @@
+{
+  "_comment": "=======================================================================",
+  "_comment": "AWS CloudWatch Agent Configuration",
+  "_comment": "=======================================================================",
+  "_comment": "This configuration file defines what logs and metrics the CloudWatch",
+  "_comment": "Agent collects from the EC2 instance and sends to CloudWatch.",
+  "_comment": "",
+  "_comment": "LOGS COLLECTED:",
+  "_comment": "- /var/log/auth.log: SSH authentication, sudo commands",
+  "_comment": "- /var/log/syslog: System messages, service logs",
+  "_comment": "",
+  "_comment": "LOG STREAM NAMING:",
+  "_comment": "{instance_id} - Each instance creates its own log stream",
+  "_comment": "",
+  "_comment": "CUSTOMIZATION:",
+  "_comment": "- Add more log files in the 'files.collect_list' array",
+  "_comment": "- Enable metrics collection (uncomment 'metrics' section below)",
+  "_comment": "- Adjust log retention in Terraform (not here)",
+  "_comment": "",
+  "_comment": "DOCUMENTATION:",
+  "_comment": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Configuration-File-Details.html",
+  "_comment": "=======================================================================",
+
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "_comment": "Auth log: SSH logins, sudo commands, authentication events",
+            "file_path": "/var/log/auth.log",
+            "log_group_name": "{{ cw_log_group_auth | default('/openarena/ec2/auth') }}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "_comment_timestamp_format": "Uses syslog timestamp format automatically",
+            "_comment_encoding": "Defaults to utf-8"
+          },
+          {
+            "_comment": "Syslog: System messages, kernel logs, service logs",
+            "file_path": "/var/log/syslog",
+            "log_group_name": "{{ cw_log_group_syslog | default('/openarena/ec2/syslog') }}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC"
+          }
+{% if cw_agent_collect_app_logs | default(false) %}
+          ,{
+            "_comment": "Application log: OpenArena game server logs (optional)",
+            "file_path": "{{ openarena_log_path | default('/var/log/openarena/server.log') }}",
+            "log_group_name": "{{ cw_log_group_app | default('/openarena/ec2/app') }}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC"
+          }
+{% endif %}
+        ]
+      }
+    },
+
+    "_comment": "Log stream configuration",
+    "log_stream_name": "{instance_id}",
+    "_comment": "Available placeholders: {instance_id}, {hostname}, {ip_address}"
+  }
+
+  {% if cw_agent_collect_metrics | default(false) %},
+  "_comment": "=======================================================================",
+  "_comment": "METRICS COLLECTION (OPTIONAL)",
+  "_comment": "Uncomment to collect system metrics (CPU, memory, disk, network)",
+  "_comment": "Cost: $0.30 per metric per month (first 10k metrics free)",
+  "_comment": "=======================================================================",
+
+  "metrics": {
+    "namespace": "OpenArena/EC2",
+    "_comment": "Namespace for custom metrics in CloudWatch",
+
+    "metrics_collected": {
+      "cpu": {
+        "_comment": "CPU utilization metrics",
+        "measurement": [
+          {
+            "name": "cpu_usage_idle",
+            "rename": "CPU_IDLE",
+            "unit": "Percent"
+          },
+          {
+            "name": "cpu_usage_iowait",
+            "rename": "CPU_IOWAIT",
+            "unit": "Percent"
+          }
+        ],
+        "metrics_collection_interval": 60,
+        "_comment": "Collect every 60 seconds (1 minute)"
+      },
+
+      "disk": {
+        "_comment": "Disk usage and I/O metrics",
+        "measurement": [
+          {
+            "name": "used_percent",
+            "rename": "DISK_USED",
+            "unit": "Percent"
+          },
+          {
+            "name": "inodes_free",
+            "rename": "DISK_INODES_FREE",
+            "unit": "Count"
+          }
+        ],
+        "metrics_collection_interval": 60,
+        "resources": [
+          "/"
+        ],
+        "_comment": "Monitor root filesystem only (add /data, etc. if needed)"
+      },
+
+      "mem": {
+        "_comment": "Memory utilization metrics",
+        "measurement": [
+          {
+            "name": "mem_used_percent",
+            "rename": "MEM_USED",
+            "unit": "Percent"
+          },
+          {
+            "name": "mem_available",
+            "rename": "MEM_AVAILABLE",
+            "unit": "Megabytes"
+          }
+        ],
+        "metrics_collection_interval": 60
+      },
+
+      "netstat": {
+        "_comment": "Network connection statistics",
+        "measurement": [
+          {
+            "name": "tcp_established",
+            "rename": "TCP_CONNECTIONS",
+            "unit": "Count"
+          }
+        ],
+        "metrics_collection_interval": 60
+      },
+
+      "swap": {
+        "_comment": "Swap usage (should be low for healthy system)",
+        "measurement": [
+          {
+            "name": "swap_used_percent",
+            "rename": "SWAP_USED",
+            "unit": "Percent"
+          }
+        ],
+        "metrics_collection_interval": 60
+      }
+    },
+
+    "aggregation_dimensions": [
+      ["InstanceId"],
+      ["InstanceType"],
+      []
+    ],
+    "_comment": "Aggregate metrics by instance ID, instance type, and overall"
+  }
+  {% endif %}
+}

@@ -1,0 +1,37 @@
+---
+# ============================================================================
+# CloudWatch Agent Role Default Variables
+# ============================================================================
+# These variables configure the CloudWatch Agent behavior and log collection.
+# Override these in your playbook or inventory to customize.
+#
+# USAGE:
+# Set these in ansible/playbooks/site.yml:
+#   vars:
+#     cw_agent_collect_metrics: true
+#     cw_log_group_auth: "/myproject/auth"
+# ============================================================================
+
+# CloudWatch Log Group names
+# These must match the log groups created by Terraform in cloudwatch_logs.tf
+cw_log_group_auth: "/openarena/ec2/auth"
+cw_log_group_syslog: "/openarena/ec2/syslog"
+cw_log_group_app: "/openarena/ec2/app"
+
+# Enable/disable metrics collection
+# Metrics include: CPU, memory, disk, network stats
+# Cost: $0.30 per metric per month (after first 10k metrics free)
+cw_agent_collect_metrics: false
+
+# Enable/disable application log collection
+# If true, will collect logs from openarena_log_path
+cw_agent_collect_app_logs: false
+
+# OpenArena log file path (if cw_agent_collect_app_logs is true)
+# This should point to the game server's log file
+openarena_log_path: "/var/log/openarena/server.log"
+
+# CloudWatch Agent package version
+# Set to "latest" to always install the newest version
+# Or pin to specific version for stability: "1.247358.0-1"
+cw_agent_version: "latest"

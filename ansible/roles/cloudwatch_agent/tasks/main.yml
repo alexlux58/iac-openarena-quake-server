@@ -1,0 +1,168 @@
+---
+# ============================================================================
+# CloudWatch Agent Installation and Configuration Tasks
+# ============================================================================
+# This Ansible role installs and configures the AWS CloudWatch Agent on
+# Amazon Linux 2 EC2 instances to collect system logs and metrics.
+#
+# WHAT THIS ROLE DOES:
+# 1. Installs amazon-cloudwatch-agent package via yum
+# 2. Creates CloudWatch Agent configuration file from template
+# 3. Starts and enables CloudWatch Agent service
+# 4. Verifies agent is running and collecting logs
+#
+# PREREQUISITES:
+# - EC2 instance must have IAM role with CloudWatch Logs permissions
+# - Instance must have internet connectivity (to reach CloudWatch endpoints)
+# - Amazon Linux 2 operating system
+#
+# LOG FILES COLLECTED:
+# - /var/log/auth.log: SSH logins, sudo commands (security-critical)
+# - /var/log/syslog: System messages, service logs
+# - Custom application logs (configurable via cw_agent_log_files variable)
+#
+# CLOUDWATCH AGENT DOCS:
+# - Installation: https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/install-CloudWatch-Agent-on-EC2-Instance.html
+# - Configuration: https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Configuration-File-Details.html
+# ============================================================================
+
+- name: Update yum package cache
+  ansible.builtin.yum:
+    update_cache: yes
+  tags:
+    - cloudwatch-agent
+    - packages
+
+- name: Install amazon-cloudwatch-agent package
+  ansible.builtin.yum:
+    name: amazon-cloudwatch-agent
+    state: present
+  tags:
+    - cloudwatch-agent
+    - packages
+  register: cw_agent_install
+
+# The CloudWatch Agent configuration file defines:
+# - Which log files to collect
+# - Which CloudWatch Log Groups to send logs to
+# - Log stream naming (by instance ID)
+# - Metrics to collect (optional, commented out in template)
+- name: Create CloudWatch Agent configuration directory
+  ansible.builtin.file:
+    path: /opt/aws/amazon-cloudwatch-agent/etc
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  tags:
+    - cloudwatch-agent
+    - configuration
+
+- name: Deploy CloudWatch Agent configuration file
+  ansible.builtin.template:
+    src: amazon-cloudwatch-agent.json.j2
+    dest: /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+    mode: '0644'
+    owner: root
+    group: root
+  tags:
+    - cloudwatch-agent
+    - configuration
+  notify: Restart CloudWatch Agent
+  register: cw_agent_config
+
+# The CloudWatch Agent runs as a systemd service.
+# The agent binary is: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent
+# Configuration is managed by: amazon-cloudwatch-agent-ctl (control script)
+- name: Start and enable CloudWatch Agent service
+  ansible.builtin.shell: |
+    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+      -a fetch-config \
+      -m ec2 \
+      -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
+      -s
+  args:
+    creates: /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+  tags:
+    - cloudwatch-agent
+    - service
+  when: cw_agent_install is changed or cw_agent_config is changed
+
+# Verify the agent is running correctly
+# The agent logs to /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+# Check this file if the agent fails to start
+- name: Check CloudWatch Agent status
+  ansible.builtin.shell: |
+    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+      -m ec2 \
+      -a query
+  register: cw_agent_status
+  changed_when: false
+  tags:
+    - cloudwatch-agent
+    - verification
+
+- name: Display CloudWatch Agent status
+  ansible.builtin.debug:
+    msg: "{{ cw_agent_status.stdout }}"
+  tags:
+    - cloudwatch-agent
+    - verification
+
+# Optional: Verify log files are being tailed correctly
+# The agent monitors log files for changes and streams new lines to CloudWatch
+- name: Verify log files exist and are readable
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - /var/log/auth.log
+    - /var/log/syslog
+  register: log_files_stat
+  tags:
+    - cloudwatch-agent
+    - verification
+
+- name: Warn if log files don't exist
+  ansible.builtin.debug:
+    msg: "WARNING: Log file {{ item.item }} does not exist or is not readable"
+  loop: "{{ log_files_stat.results }}"
+  when: not item.stat.exists
+  tags:
+    - cloudwatch-agent
+    - verification
+
+# ============================================================================
+# TROUBLESHOOTING TIPS (for operators)
+# ============================================================================
+# If CloudWatch Agent fails to start or logs don't appear in CloudWatch:
+#
+# 1. Check agent status:
+#    sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -m ec2 -a query
+#
+# 2. View agent logs:
+#    sudo tail -f /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+#
+# 3. Verify IAM permissions:
+#    aws logs describe-log-groups --region us-west-2
+#    (Should list log groups without access denied error)
+#
+# 4. Test log file accessibility:
+#    sudo cat /var/log/auth.log
+#    sudo cat /var/log/syslog
+#
+# 5. Manually restart agent:
+#    sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+#      -a fetch-config -m ec2 \
+#      -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+#
+# 6. Check CloudWatch Logs console:
+#    - Log group should exist: /openarena/ec2/auth
+#    - Log stream should exist: <instance-id>
+#    - Log events should appear within 1-2 minutes
+#
+# Common issues:
+# - "AccessDenied" in agent log: IAM role missing CloudWatch Logs permissions
+# - "No such file or directory" for log files: Log file path incorrect
+# - "Unable to connect to CloudWatch": Network/security group issue
+# - Logs not appearing: Wait 2-3 minutes after agent start for first batch
+# ============================================================================

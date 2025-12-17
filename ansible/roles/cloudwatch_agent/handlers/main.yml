@@ -1,0 +1,29 @@
+---
+# ============================================================================
+# CloudWatch Agent Role Handlers
+# ============================================================================
+# Handlers are tasks that run only when notified by other tasks.
+# These handlers manage the CloudWatch Agent service lifecycle.
+# ============================================================================
+
+- name: Restart CloudWatch Agent
+  ansible.builtin.shell: |
+    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+      -a fetch-config \
+      -m ec2 \
+      -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
+      -s
+  listen: "Restart CloudWatch Agent"
+  tags:
+    - cloudwatch-agent
+    - service
+
+- name: Stop CloudWatch Agent
+  ansible.builtin.shell: |
+    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+      -a stop \
+      -m ec2
+  listen: "Stop CloudWatch Agent"
+  tags:
+    - cloudwatch-agent
+    - service

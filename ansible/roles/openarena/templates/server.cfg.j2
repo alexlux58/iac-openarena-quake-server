@@ -1,0 +1,23 @@
+# OpenArena Server Configuration File
+# This file is generated from the Jinja2 template and contains server settings
+
+# Server hostname displayed to players
+set sv_hostname "{{ oa_sv_hostname }}"
+
+# Maximum number of clients (players) allowed
+set sv_maxclients "{{ oa_max_clients }}"
+
+# Game type (0=FFA, 1=Tournament, 2=Single Player, 3=TDM, 4=CTF)
+set g_gametype "{{ oa_gametype }}"
+
+# Time limit in minutes (0 = unlimited)
+set timelimit "{{ oa_timelimit }}"
+
+# Frag limit (0 = unlimited)
+set fraglimit "{{ oa_fraglimit }}"
+
+# Network port for game server (must match security group)
+set net_port "{{ oa_net_port }}"
+
+# Starting map to load
+map {{ oa_map }}

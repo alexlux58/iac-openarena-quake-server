@@ -1,0 +1,18 @@
+---
+# Ansible Handlers
+# Handlers are tasks that run only when notified by other tasks
+# They are useful for restarting services when configuration changes
+
+# Reload systemd daemon
+# This is needed after creating/modifying systemd service files
+# changed_when: false prevents this from showing as "changed" in playbook output
+- name: Reload systemd
+  ansible.builtin.command: systemctl daemon-reload
+  changed_when: false
+
+# Restart OpenArena service
+# This handler is triggered when server.cfg or the systemd unit file changes
+- name: Restart OpenArena
+  ansible.builtin.systemd:
+    name: openarena
+    state: restarted

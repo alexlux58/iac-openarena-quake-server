@@ -1,0 +1,136 @@
+================================================================================
+OpenArena AWS - Future Security & Production Improvements
+================================================================================
+
+These improvements will transform the project into a "Secure Production Blueprint"
+that demonstrates enterprise-grade security practices recognized by recruiters
+and hiring managers.
+
+================================================================================
+A. Eliminate SSH as the Default Access Path
+================================================================================
+
+Replace inbound SSH with AWS Systems Manager Session Manager (SSM).
+
+Security Impact:
+  - No open port 22
+  - No exposed SSH keys
+  - Full session auditing
+
+Deliverables:
+  [ ] Terraform: Attach AmazonSSMManagedInstanceCore to the instance role
+  [ ] Security Group: Remove SSH ingress rule
+  [ ] README: Document "Access via aws ssm start-session"
+  [ ] Update deploy scripts to use SSM instead of SSH
+  [ ] Update Ansible to use SSM plugin instead of SSH
+
+================================================================================
+B. Harden the OS and Document It
+================================================================================
+
+Add a "hardening" role or cloud-init that:
+  - Enables unattended security updates
+  - Configures UFW (or nftables)
+  - Locks down services, disables password auth
+  - Installs auditd (optional)
+
+Deliverables:
+  [ ] Create ansible/roles/hardening/ with OS hardening tasks
+  [ ] Create docs/hardening.md with exact changes documented
+  [ ] CI check: Verify CIS-ish settings (even if partial)
+  [ ] Add hardening role to site.yml playbook
+  [ ] Document all security configurations applied
+
+================================================================================
+C. Add Policy-as-Code Gates for IaC
+================================================================================
+
+In CI, enforce:
+  - Terraform formatting + validate (already done)
+  - IaC security scan: tfsec or checkov
+  - Secret scanning: gitleaks
+  - License/vuln scanning: trivy fs + osv-scanner
+
+Deliverables:
+  [ ] Update .github/workflows/ci.yml with security scanning stages:
+      [ ] Add tfsec or checkov for Terraform security scanning
+      [ ] Add gitleaks for secret detection
+      [ ] Add trivy filesystem scan
+      [ ] Add osv-scanner for dependency vulnerability scanning
+  [ ] Create .pre-commit-config.yaml to catch issues before CI
+  [ ] Document security scanning results and remediation process
+
+================================================================================
+D. Supply Chain and Artifact Integrity (Big DevSecOps Signal)
+================================================================================
+
+Generate an SBOM for your build artifacts (even if it's just config bundles)
+Sign artifacts (or container images) with cosign
+Produce provenance (SLSA-lite)
+
+Deliverables:
+  [ ] Create Makefile targets:
+      [ ] make sbom - Generate SBOM for artifacts
+      [ ] make sign - Sign artifacts with cosign
+      [ ] make provenance - Generate SLSA-lite provenance
+  [ ] Create docs/supply-chain.md explaining the flow
+  [ ] Integrate SBOM generation into CI/CD pipeline
+  [ ] Document artifact signing process
+  [ ] Store signed artifacts in secure location
+
+================================================================================
+E. Threat Modeling + Runbooks (Rare, High-Value)
+================================================================================
+
+Add threat modeling and operational runbooks.
+
+Deliverables:
+  [ ] Create docs/threat-model.md (STRIDE-style threat model)
+      [ ] Identify threats using STRIDE methodology
+      [ ] Document attack vectors
+      [ ] Document mitigations
+  [ ] Create runbooks/ directory with:
+      [ ] runbooks/suspicious-ssh-attempts.md
+          - Even if moving to SSM, show historical handling
+      [ ] runbooks/guardduty-finding-triage.md
+          - How to respond to GuardDuty alerts
+      [ ] runbooks/high-cost-spike-response.md
+          - Cost anomaly detection and response
+      [ ] runbooks/incident-response.md
+          - General incident response procedures
+  [ ] Document monitoring and alerting setup
+  [ ] Create playbooks for common security scenarios
+
+================================================================================
+Additional Security Enhancements (Optional)
+================================================================================
+
+[ ] Enable AWS GuardDuty
+[ ] Enable AWS Security Hub
+[ ] Add CloudWatch alarms for security events
+[ ] Implement AWS Config rules for compliance
+[ ] Add VPC Flow Logs
+[ ] Enable S3 bucket encryption and versioning
+[ ] Add AWS WAF if applicable
+[ ] Implement least-privilege IAM policies
+[ ] Add MFA requirements documentation
+[ ] Create security baseline documentation
+
+================================================================================
+Notes
+================================================================================
+
+This TODO list represents the kind of documentation and practices that separate
+"can run tools" from "can operate securely." These improvements demonstrate:
+
+- Deep understanding of security best practices
+- Production-ready infrastructure mindset
+- Operational excellence
+- DevSecOps maturity
+- Compliance awareness
+
+Priority: Focus on items A, B, and C first as they provide the most immediate
+security value and are most recognizable to hiring managers.
+
+================================================================================
+

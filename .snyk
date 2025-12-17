@@ -1,0 +1,18 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.0
+
+# Ignore rules for false positives or acceptable risks
+ignore: {}
+
+# Patch rules for vulnerabilities that can be automatically patched
+patch: {}
+
+# Exclude paths from scanning
+exclude:
+  global:
+    - terraform/.terraform/**
+    - terraform/**/*.tfstate*
+    - ansible/.venv/**
+    - node_modules/**
+    - .git/**
+

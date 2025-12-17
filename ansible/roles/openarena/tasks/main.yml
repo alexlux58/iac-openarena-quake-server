@@ -1,0 +1,77 @@
+---
+# OpenArena Server Installation and Configuration Tasks
+# This role installs and configures OpenArena dedicated server on Amazon Linux 2
+# Note: OpenArena is not available in Amazon Linux repositories, so we download it manually
+
+# Update package cache and install dependencies (Amazon Linux 2 uses yum)
+# Note: Using command module to bypass Ansible yum module DNF detection issues
+- name: Install required dependencies for OpenArena
+  ansible.builtin.command:
+    cmd: yum install -y wget unzip glibc libstdc++ libX11 libXext libXxf86vm libXrandr libXcursor libXinerama libXrender libXi mesa-libGL mesa-libGLU
+    creates: /usr/bin/wget
+  register: yum_result
+  changed_when: "'Nothing to do' not in yum_result.stdout"
+
+# Create OpenArena installation directory
+- name: Create OpenArena base directory
+  ansible.builtin.file:
+    path: /opt/openarena
+    state: directory
+    mode: "0755"
+
+# Copy OpenArena dedicated server from local files
+# OpenArena 0.8.8 is the latest stable version
+- name: Copy OpenArena dedicated server to remote
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../files/openarena-0.8.8.zip"
+    dest: /tmp/openarena-0.8.8.zip
+    mode: "0644"
+  register: download_result
+
+# Extract OpenArena
+- name: Extract OpenArena
+  ansible.builtin.unarchive:
+    src: /tmp/openarena-0.8.8.zip
+    dest: /opt
+    remote_src: true
+    creates: /opt/openarena-0.8.8
+
+# Create symlink for easier access
+- name: Create OpenArena symlink
+  ansible.builtin.file:
+    src: /opt/openarena-0.8.8
+    dest: /opt/openarena
+    state: link
+    force: true
+
+# Create config directory
+- name: Create config directory
+  ansible.builtin.file:
+    path: "{{ oa_cfg_dir }}"
+    state: directory
+    mode: "0755"
+
+# Write server configuration file
+- name: Write server.cfg
+  ansible.builtin.template:
+    src: server.cfg.j2
+    dest: "{{ oa_cfg_file }}"
+    mode: "0644"
+  notify: Restart OpenArena
+
+# Install systemd service unit
+- name: Install systemd unit
+  ansible.builtin.template:
+    src: openarena.service.j2
+    dest: /etc/systemd/system/openarena.service
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart OpenArena
+
+# Enable and start the OpenArena service
+- name: Enable and start service
+  ansible.builtin.systemd:
+    name: openarena
+    enabled: true
+    state: started

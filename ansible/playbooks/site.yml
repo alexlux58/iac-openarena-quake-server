@@ -1,0 +1,11 @@
+---
+# Main Ansible Playbook for OpenArena Server
+# This playbook configures the OpenArena dedicated game server on Amazon Linux 2
+
+- name: Configure OpenArena server
+  hosts: quake  # Host group defined in inventory/hosts.ini
+  become: true  # Run tasks with sudo/root privileges
+  
+  # Apply the openarena role which installs and configures the server
+  roles:
+    - openarena

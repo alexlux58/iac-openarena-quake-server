@@ -1,0 +1,157 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "IAMRoleManagement",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:GetRole",
+        "iam:ListRoles",
+        "iam:UpdateRole",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:GetRolePolicy",
+        "iam:ListRolePolicies",
+        "iam:ListAttachedRolePolicies",
+        "iam:CreateInstanceProfile",
+        "iam:DeleteInstanceProfile",
+        "iam:GetInstanceProfile",
+        "iam:AddRoleToInstanceProfile",
+        "iam:RemoveRoleFromInstanceProfile",
+        "iam:ListInstanceProfiles",
+        "iam:ListInstanceProfilesForRole",
+        "iam:PassRole",
+        "iam:TagRole",
+        "iam:UntagRole",
+        "iam:ListRoleTags"
+      ],
+      "Resource": [
+        "arn:aws:iam::026600053230:role/openarena-*",
+        "arn:aws:iam::026600053230:instance-profile/openarena-*"
+      ]
+    },
+    {
+      "Sid": "SNSTopicManagement",
+      "Effect": "Allow",
+      "Action": [
+        "sns:CreateTopic",
+        "sns:DeleteTopic",
+        "sns:GetTopicAttributes",
+        "sns:SetTopicAttributes",
+        "sns:ListTopics",
+        "sns:Subscribe",
+        "sns:Unsubscribe",
+        "sns:ListSubscriptions",
+        "sns:ListSubscriptionsByTopic",
+        "sns:ConfirmSubscription",
+        "sns:TagResource",
+        "sns:UntagResource",
+        "sns:ListTagsForResource"
+      ],
+      "Resource": [
+        "arn:aws:sns:us-west-2:026600053230:openarena-*",
+        "arn:aws:sns:*:026600053230:openarena-*"
+      ]
+    },
+    {
+      "Sid": "CostAndUsageReporting",
+      "Effect": "Allow",
+      "Action": [
+        "cur:PutReportDefinition",
+        "cur:DeleteReportDefinition",
+        "cur:DescribeReportDefinitions",
+        "cur:ModifyReportDefinition"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "KMSTagging",
+      "Effect": "Allow",
+      "Action": [
+        "kms:CreateKey",
+        "kms:DescribeKey",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:ListKeys",
+        "kms:ListAliases",
+        "kms:ListResourceTags",
+        "kms:TagResource",
+        "kms:UntagResource",
+        "kms:EnableKeyRotation",
+        "kms:DisableKey",
+        "kms:ScheduleKeyDeletion",
+        "kms:CancelKeyDeletion",
+        "kms:PutKeyPolicy",
+        "kms:CreateAlias",
+        "kms:DeleteAlias",
+        "kms:UpdateAlias"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "GuardDutyManagement",
+      "Effect": "Allow",
+      "Action": [
+        "guardduty:CreateDetector",
+        "guardduty:DeleteDetector",
+        "guardduty:GetDetector",
+        "guardduty:UpdateDetector",
+        "guardduty:ListDetectors",
+        "guardduty:TagResource",
+        "guardduty:UntagResource",
+        "guardduty:ListTagsForResource",
+        "guardduty:CreatePublishingDestination",
+        "guardduty:DeletePublishingDestination",
+        "guardduty:DescribePublishingDestination",
+        "guardduty:UpdatePublishingDestination"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "BudgetsManagement",
+      "Effect": "Allow",
+      "Action": [
+        "budgets:CreateBudgetAction",
+        "budgets:DeleteBudgetAction",
+        "budgets:DescribeBudgetAction",
+        "budgets:UpdateBudgetAction",
+        "budgets:ViewBudget",
+        "budgets:ModifyBudget"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CostExplorerAnomalyDetection",
+      "Effect": "Allow",
+      "Action": [
+        "ce:CreateAnomalyMonitor",
+        "ce:DeleteAnomalyMonitor",
+        "ce:GetAnomalyMonitors",
+        "ce:UpdateAnomalyMonitor",
+        "ce:CreateAnomalySubscription",
+        "ce:DeleteAnomalySubscription",
+        "ce:GetAnomalySubscriptions",
+        "ce:UpdateAnomalySubscription",
+        "ce:TagResource",
+        "ce:UntagResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "S3TaggingOperations",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutBucketTagging",
+        "s3:GetBucketTagging",
+        "s3:DeleteBucketTagging"
+      ],
+      "Resource": [
+        "arn:aws:s3:::alexflux-*"
+      ]
+    }
+  ]
+}
