@@ -9,20 +9,37 @@
 
 - name: Install Docker
   ansible.builtin.command:
-    cmd: |
-      yum install -y docker
-      systemctl start docker
-      systemctl enable docker
-      usermod -aG docker ec2-user
+    cmd: yum install -y docker
+    creates: /usr/bin/docker
   when: not docker_installed.stat.exists
   register: docker_install
+  changed_when: "'Nothing to do' not in docker_install.stdout"
+
+- name: Start Docker service
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: yes
+  when: not docker_installed.stat.exists or docker_install.changed
+
+- name: Add ec2-user to docker group
+  ansible.builtin.user:
+    name: ec2-user
+    groups: docker
+    append: yes
+  when: not docker_installed.stat.exists or docker_install.changed
+
+- name: Check if Docker Compose is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/docker-compose
+  register: docker_compose_installed
 
 - name: Install Docker Compose
   ansible.builtin.get_url:
     url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
     dest: /usr/local/bin/docker-compose
     mode: "0755"
-  when: not docker_installed.stat.exists or docker_install.changed
+  when: not docker_compose_installed.stat.exists
 
 - name: Create QuakeJS directory structure
   ansible.builtin.file:
@@ -33,8 +50,124 @@
     - /opt/quakejs
     - /opt/quakejs/baseoa
     - /opt/quakejs/missionpack
+    - /opt/quakejs/certs
 
-- name: Find OpenArena pk3 files on server
+- name: Check if openssl is installed
+  ansible.builtin.command:
+    cmd: rpm -q openssl
+  register: openssl_check
+  changed_when: false
+  failed_when: false
+
+- name: Install openssl if not present
+  ansible.builtin.command:
+    cmd: yum install -y openssl
+  when: openssl_check.rc != 0
+  register: openssl_install
+  changed_when: "'Nothing to do' not in openssl_install.stdout"
+
+- name: Check if SSL certificates already exist
+  ansible.builtin.stat:
+    path: /opt/quakejs/certs/fullchain.pem
+  register: cert_exists
+
+- name: Generate self-signed SSL certificate if needed
+  ansible.builtin.shell: |
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+      -keyout /opt/quakejs/certs/privkey.pem \
+      -out /opt/quakejs/certs/fullchain.pem \
+      -subj "/C=US/ST=State/L=City/O=Organization/CN=games.alexflux.com" 2>&1
+  when: not cert_exists.stat.exists
+  changed_when: not cert_exists.stat.exists
+  args:
+    creates: /opt/quakejs/certs/fullchain.pem
+
+- name: Check if quakejs_images.tar exists in ansible/files
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/../files/quakejs_images.tar"
+  register: quakejs_tar_file
+  delegate_to: localhost
+  become: false
+  ignore_errors: true
+
+- name: Copy quakejs_images.tar to server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../files/quakejs_images.tar"
+    dest: /tmp/quakejs_images.tar
+    mode: "0644"
+  when: quakejs_tar_file.stat.exists is defined and quakejs_tar_file.stat.exists
+
+- name: Load Docker images from tar file
+  ansible.builtin.command:
+    cmd: docker load -i /tmp/quakejs_images.tar
+  when: quakejs_tar_file.stat.exists is defined and quakejs_tar_file.stat.exists
+  register: docker_load_result
+  changed_when: "'Loaded image' in docker_load_result.stdout"
+
+- name: Debug docker load output
+  ansible.builtin.debug:
+    msg: "Docker load output: {{ docker_load_result.stdout_lines | default([]) }}"
+  when: 
+    - quakejs_tar_file.stat.exists is defined 
+    - quakejs_tar_file.stat.exists
+    - docker_load_result is defined
+
+- name: Extract all loaded image names
+  ansible.builtin.set_fact:
+    loaded_images: "{{ docker_load_result.stdout_lines | select('match', 'Loaded image:') | map('regex_replace', '.*Loaded image: (.+)', '\\1') | list }}"
+  when: 
+    - quakejs_tar_file.stat.exists is defined 
+    - quakejs_tar_file.stat.exists
+    - docker_load_result.stdout_lines is defined
+
+- name: Extract lobby image name from loaded images
+  ansible.builtin.set_fact:
+    quakejs_lobby_image: "{{ loaded_images | select('match', '.*lobby.*') | first | default('quakejs-docker-lobby:latest') }}"
+  when: 
+    - loaded_images is defined
+    - loaded_images | length > 0
+
+- name: Extract server image name from loaded images
+  ansible.builtin.set_fact:
+    quakejs_server_image: "{{ loaded_images | reject('match', '.*lobby.*') | first | default('quakejs-docker-quakejs:latest') }}"
+  when: 
+    - loaded_images is defined
+    - loaded_images | length > 0
+
+- name: Set default image names if tar file doesn't exist or extraction failed
+  ansible.builtin.set_fact:
+    quakejs_lobby_image: "{{ quakejs_lobby_image | default('quakejs-docker-lobby:latest') }}"
+    quakejs_server_image: "{{ quakejs_server_image | default('quakejs-docker-quakejs:latest') }}"
+
+- name: Debug final image names
+  ansible.builtin.debug:
+    msg: "Using Lobby Docker image: {{ quakejs_lobby_image }}, Server Docker image: {{ quakejs_server_image }}"
+
+- name: Create docker-compose.yml for QuakeJS
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /opt/quakejs/docker-compose.yml
+    mode: "0644"
+  vars:
+    quakejs_docker_image: "{{ quakejs_lobby_image | default('quakejs-docker-lobby:latest') }}"
+    quakejs_server_image: "{{ quakejs_server_image | default('quakejs-docker-quakejs:latest') }}"
+
+- name: Check if pak0.pk3 exists in ansible/files
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/../files/pak0.pk3"
+  register: local_pak0_file
+  delegate_to: localhost
+  become: false
+  ignore_errors: true
+
+- name: Copy pak0.pk3 file from ansible/files to server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../files/pak0.pk3"
+    dest: /opt/quakejs/baseoa/pak0.pk3
+    mode: "0644"
+  when: local_pak0_file.stat.exists is defined and local_pak0_file.stat.exists
+
+- name: Find OpenArena pk3 files on server (fallback if local copy failed)
   ansible.builtin.find:
     paths:
       - /usr/local/games/openarena/baseoa
@@ -43,39 +176,148 @@
     patterns: "*.pk3"
     recurse: no
   register: found_pk3_files
-  ignore_errors: yes
+  ignore_errors: true
+  when: local_pak0_file.stat.exists is not defined or not local_pak0_file.stat.exists
 
-- name: Create docker-compose.yml for QuakeJS
-  ansible.builtin.template:
-    src: docker-compose.yml.j2
-    dest: /opt/quakejs/docker-compose.yml
-    mode: "0644"
-
-- name: Copy OpenArena pk3 files to QuakeJS directory
+- name: Copy OpenArena pk3 files from server to QuakeJS directory (fallback)
   ansible.builtin.copy:
     src: "{{ item.path }}"
     dest: /opt/quakejs/baseoa/{{ item.path | basename }}
     remote_src: yes
     mode: "0644"
   loop: "{{ found_pk3_files.files | default([]) }}"
-  when: found_pk3_files.files is defined and found_pk3_files.files | length > 0
-  ignore_errors: yes
+  when: 
+    - found_pk3_files.files is defined 
+    - found_pk3_files.files | length > 0
+    - (local_pak0_file.stat.exists is not defined or not local_pak0_file.stat.exists)
+  ignore_errors: true
   loop_control:
     label: "{{ item.path | basename }}"
 
-- name: Start QuakeJS container
+- name: Stop existing QuakeJS container (if any)
   ansible.builtin.command:
-    cmd: docker-compose up -d
+    cmd: /usr/local/bin/docker-compose down
+    chdir: /opt/quakejs
+  ignore_errors: true
+
+- name: Start QuakeJS container (force recreate to pick up new config)
+  ansible.builtin.command:
+    cmd: /usr/local/bin/docker-compose up -d --force-recreate
     chdir: /opt/quakejs
   register: quakejs_start
 
-- name: Wait for QuakeJS to be ready
+- name: Check QuakeJS lobby container status
+  ansible.builtin.command:
+    cmd: docker ps -a --filter name=quakejs-lobby --format "table {{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}"
+  register: quakejs_lobby_status
+  changed_when: false
+
+- name: Check QuakeJS server container status
+  ansible.builtin.command:
+    cmd: docker ps -a --filter name=quakejs-server --format "table {{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}"
+  register: quakejs_server_status
+  changed_when: false
+
+- name: Display QuakeJS container statuses
+  ansible.builtin.debug:
+    msg: 
+      - "Lobby: {{ quakejs_lobby_status.stdout }}"
+      - "Server: {{ quakejs_server_status.stdout }}"
+
+- name: Show QuakeJS lobby container logs (last 30 lines)
+  ansible.builtin.command:
+    cmd: docker logs --tail 30 quakejs-lobby
+  register: quakejs_lobby_logs
+  changed_when: false
+  ignore_errors: true
+
+- name: Show QuakeJS server container logs (last 30 lines)
+  ansible.builtin.command:
+    cmd: docker logs --tail 30 quakejs-server
+  register: quakejs_server_logs
+  changed_when: false
+  ignore_errors: true
+
+- name: Display QuakeJS container logs
+  ansible.builtin.debug:
+    msg:
+      - "=== Lobby Logs ==="
+      - "{{ quakejs_lobby_logs.stdout_lines | default([]) }}"
+      - "=== Server Logs ==="
+      - "{{ quakejs_server_logs.stdout_lines | default([]) }}"
+  when: quakejs_lobby_logs.stdout_lines is defined or quakejs_server_logs.stdout_lines is defined
+
+- name: Wait for QuakeJS WebSocket port to be listening (8080)
+  ansible.builtin.wait_for:
+    port: 8080
+    host: localhost
+    delay: 5
+    timeout: 300
+  ignore_errors: true
+
+- name: Wait for QuakeJS static files port to be listening (8081)
+  ansible.builtin.wait_for:
+    port: 8081
+    host: localhost
+    delay: 5
+    timeout: 300
+  ignore_errors: true
+
+- name: Wait for QuakeJS to be ready (HTTPS on port 8081 which maps to container's 443 for static files)
   ansible.builtin.uri:
-    url: http://localhost:8080
-    status_code: 200
+    url: https://127.0.0.1:8081
+    status_code: [200, 301, 302]
+    validate_certs: no
+    method: GET
   register: quakejs_ready
-  until: quakejs_ready.status == 200
-  retries: 30
-  delay: 2
-  ignore_errors: yes
+  until: quakejs_ready.status in [200, 301, 302]
+  retries: 10
+  delay: 5
+  ignore_errors: true
+
+- name: Remove Sohonet references from QuakeJS lobby container HTML files
+  ansible.builtin.shell: |
+    docker exec quakejs-lobby sh -c 'find /usr/share/nginx/html -type f \( -name "*.html" -o -name "*.js" -o -name "*.json" \) -exec sed -i "s/Sohonet//g" {} \;' || true
+    docker exec quakejs-lobby sh -c 'find /usr/share/nginx/html -type f \( -name "*.html" -o -name "*.js" -o -name "*.json" \) -exec sed -i "s/sohonet//gi" {} \;' || true
+  changed_when: false
+  ignore_errors: true
+
+- name: Patch QuakeJS client to use Cloudflare-friendly WebSocket (443 + /quakejs-ws/)
+  ansible.builtin.shell: |
+    # ioquake3.js expects +connect to be host:port and constructs ws(s)://<addr>:<port>
+    # Passing a full URL (https://...) breaks parsing and can produce URLs like wss://https:27960/
+    #
+    # Cloudflare proxies websockets on 443, so:
+    # - set connectAddr to host:443 (NOT a full URL)
+    # - patch ioquake3.js to append /quakejs-ws/ to the websocket URL it constructs
+    # - adjust exitHandler to go back to /quakejs/ instead of site root
+    # 1) connectAddr: replace port 8080 -> 443 on the connectAddr line (line 47 in our lobby/ffa/index.html)
+    docker exec quakejs-lobby sh -c "sed -i '47s/:8080/:443/' /usr/share/nginx/html/ffa/index.html" || true
+
+    # 2) exitHandler: go back to QuakeJS lobby instead of the main arcade page
+    docker exec quakejs-lobby sh -c "sed -i \"s|window.location.href = '/';|window.location.href = '/quakejs/';|g\" /usr/share/nginx/html/ffa/index.html" || true
+
+    # 3) WebSocket URL: append /quakejs-ws/ so host nginx can route it on 443
+    docker exec quakejs-lobby sh -c "sed -i \"s|var url = wsProto + realAddr + ':' + port;|var url = wsProto + realAddr + ':' + port + '/quakejs-ws/';|g\" /usr/share/nginx/html/ioquake3.js" || true
+  changed_when: false
+  ignore_errors: true
+
+- name: Verify QuakeJS client patch (connectAddr + websocket url)
+  ansible.builtin.shell: |
+    docker exec quakejs-lobby sh -c 'echo "=== connectAddr ==="; grep -n "connectAddr" /usr/share/nginx/html/ffa/index.html || true; echo "=== exitHandler ==="; grep -n "exitHandler" -A2 /usr/share/nginx/html/ffa/index.html || true; echo "=== websocket url ==="; grep -n "var url =" /usr/share/nginx/html/ioquake3.js | head -5 || true'
+  register: quakejs_patch_verify
+  changed_when: false
+  ignore_errors: true
+
+- name: Display QuakeJS client patch verification
+  ansible.builtin.debug:
+    msg: "{{ quakejs_patch_verify.stdout_lines | default([]) }}"
+  when: quakejs_patch_verify.stdout_lines is defined
+
+- name: Remove Sohonet references from QuakeJS server config (if exists)
+  ansible.builtin.shell: |
+    docker exec quakejs-server sh -c 'find /quakejs -type f -name "*.cfg" -exec sed -i "s/Sohonet//g" {} \;' || true
+    docker exec quakejs-server sh -c 'find /quakejs -type f -name "*.cfg" -exec sed -i "s/sohonet//gi" {} \;' || true
+  changed_when: false
+  ignore_errors: true
 

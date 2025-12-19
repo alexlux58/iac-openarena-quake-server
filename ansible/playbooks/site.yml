@@ -1,9 +1,9 @@
 ---
-# Main Ansible Playbook for OpenArena Server
-# This playbook configures the OpenArena dedicated game server on Amazon Linux 2
-# and adds a browser-based game accessible via HTTP
+# Main Ansible Playbook for Browser Game Arcade
+# This playbook configures a multi-game browser arcade on Amazon Linux 2
+# Includes QuakeJS and other browser-based games accessible via HTTP
 
-- name: Configure OpenArena server
+- name: Configure Browser Game Arcade Server
   hosts: quake  # Host group defined in inventory/hosts.ini
   become: true  # Run tasks with sudo/root privileges
   gather_facts: false  # Disable fact gathering initially to avoid Python version issues
@@ -47,5 +47,4 @@
 
   # Apply roles to install and configure the servers
   roles:
-    - openarena
     - web-game

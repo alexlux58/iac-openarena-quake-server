@@ -36,13 +36,14 @@ provider "aws" {
 #
 provider "cloudflare" {
   # Cloudflare provider authentication:
-  # 1. If var.cloudflare_api_token is set (non-empty), use that
-  # 2. Otherwise, provider will automatically use CLOUDFLARE_API_TOKEN environment variable
-  # 3. If neither is set, provider will fail (but this is OK if not using Cloudflare DNS)
+  # The provider will automatically use CLOUDFLARE_API_TOKEN environment variable
+  # (which is exported from .env file by deploy.sh script).
+  #
+  # If you want to use a Terraform variable instead, uncomment the line below:
+  # api_token = var.cloudflare_api_token
   #
   # IMPORTANT: The provider requires a token value during initialization, even if you're
   # not creating any Cloudflare resources. Set CLOUDFLARE_API_TOKEN in your .env file.
   # If not using Cloudflare, set it to "dummy" - it won't be validated until resources are created.
-  api_token = var.cloudflare_api_token != "" ? var.cloudflare_api_token : null
 }
 

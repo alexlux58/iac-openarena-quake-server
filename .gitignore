@@ -44,6 +44,10 @@ Thumbs.db
 ansible/inventory/hosts.ini
 ansible/files/openarena-*.zip
 
+# Large QuakeJS files (uncomment if you don't want to commit them)
+ansible/files/pak0.pk3
+ansible/files/quakejs_images.tar
+
 # Local game client files
 openarena-client/
 *.command

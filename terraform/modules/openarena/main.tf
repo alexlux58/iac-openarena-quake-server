@@ -1,6 +1,6 @@
-# OpenArena Infrastructure Module
+# Browser Game Arcade Infrastructure Module
 # This module creates an EC2 instance with Elastic IP, Security Group, and Cloudflare DNS record
-# for hosting an OpenArena (Quake) game server on AWS
+# for hosting a multi-game browser arcade (including QuakeJS) on AWS
 
 # Data source to get the default VPC
 # Amazon Linux instances need to be in a VPC (EC2-Classic is deprecated)
@@ -113,16 +113,6 @@ resource "aws_security_group" "openarena" {
     cidr_blocks = [var.ssh_allowed_cidr]
   }
 
-  # OpenArena game server port (UDP)
-  # Port 27960 is the default Quake/OpenArena server port
-  ingress {
-    description = "OpenArena game server (UDP port 27960)"
-    from_port   = 27960
-    to_port     = 27960
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"] # Allow from anywhere for game clients
-  }
-
   # HTTP access for browser-based games
   # Port 80 serves the PvP multiplayer game via Nginx (standard HTTP port)
   ingress {
@@ -131,6 +121,28 @@ resource "aws_security_group" "openarena" {
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"] # Allow from anywhere for web browsers
+  }
+
+  # HTTPS access for browser-based games
+  # Port 443 serves HTTPS traffic via Nginx (standard HTTPS port)
+  ingress {
+    description = "HTTPS access for browser-based games (port 443)"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Allow from anywhere for web browsers
+  }
+
+  # QuakeJS WebSocket access
+  # Port 8080 is used by QuakeJS for WebSocket connections (WSS)
+  # Note: Cloudflare only proxies ports 80/443, so this port must be accessed directly
+  # or via a DNS A record that is not proxied through Cloudflare
+  ingress {
+    description = "QuakeJS WebSocket access (port 8080)"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Allow from anywhere for WebSocket connections
   }
 
   # Allow all outbound traffic

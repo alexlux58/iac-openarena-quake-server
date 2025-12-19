@@ -93,6 +93,146 @@ http {
             try_files $uri $uri/ /asteroids/index.html;
         }
 
+        # QuakeJS - proxy to Docker container
+        # Handle /quakejs (without trailing slash) - redirect to /quakejs/
+        location = /quakejs {
+            return 301 /quakejs/;
+        }
+
+        # Proxy QuakeJS assets directory - MUST come before other location blocks
+        # The game needs /assets/manifest.json to load properly.
+        #
+        # IMPORTANT: We must prevent the later regex locations (like ~* \.(js|json)$)
+        # from matching /assets/manifest.json and serving a local 404.
+        # Use ^~ so this prefix location wins over regex locations.
+        #
+        # Use trailing slash in both location and proxy_pass to preserve path correctly.
+        location ^~ /assets/ {
+            proxy_pass https://localhost:8081/assets/;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_ssl_verify off;
+            proxy_ssl_server_name off;
+        }
+        
+        # Handle /assets (without trailing slash) - redirect to /assets/
+        location = /assets {
+            return 301 /assets/;
+        }
+
+        # Proxy QuakeJS static assets (served at root level by container)
+        # These are referenced as absolute paths like /game.css, /ioquake3.js
+        # Container's port 443 serves static files, mapped to host port 8081
+        location ~ ^/(game\.css|ioquake3\.js|favicon.*\.(ico|png))$ {
+            proxy_pass https://localhost:8081;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_ssl_verify off;
+            proxy_ssl_server_name off;
+        }
+
+        # Proxy /quakejs/ to QuakeJS Docker container root
+        # Container's port 443 serves static files, mapped to host port 8081
+        # The container serves:
+        #   - / (lobby/index.html)
+        #   - /ffa/ (game page)
+        #   - /admin/ (admin page)
+        location /quakejs/ {
+            proxy_pass https://localhost:8081/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 300s;
+            proxy_connect_timeout 75s;
+            # WebSocket support for real-time gameplay
+            proxy_buffering off;
+            # Don't verify SSL certificate (self-signed cert)
+            proxy_ssl_verify off;
+            proxy_ssl_server_name off;
+        }
+        
+        # Explicitly handle /quakejs/ffa/ to ensure it works correctly
+        # This ensures /quakejs/ffa/ is properly proxied to container's /ffa/
+        location /quakejs/ffa/ {
+            proxy_pass https://localhost:8081/ffa/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 300s;
+            proxy_connect_timeout 75s;
+            proxy_buffering off;
+            proxy_ssl_verify off;
+            proxy_ssl_server_name off;
+        }
+
+        # Proxy /ffa/ to QuakeJS container (game page)
+        # Container's port 443 serves static files, mapped to host port 8081
+        location /ffa/ {
+            proxy_pass https://localhost:8081/ffa/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 300s;
+            proxy_connect_timeout 75s;
+            proxy_buffering off;
+            proxy_ssl_verify off;
+            proxy_ssl_server_name off;
+        }
+
+        # Proxy /admin/ to QuakeJS container (admin page)
+        # Container's port 443 serves static files, mapped to host port 8081
+        location /admin/ {
+            proxy_pass https://localhost:8081/admin/;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 300s;
+            proxy_connect_timeout 75s;
+            proxy_ssl_verify off;
+            proxy_ssl_server_name off;
+        }
+
+        # Proxy WebSocket connections to QuakeJS container port 8080
+        # The game's JavaScript is patched to use /quakejs-ws/ instead of :8080
+        # This allows WebSocket connections to work through Cloudflare (which only proxies 80/443)
+        # Note: The container's nginx on port 8080 expects connections at root (/), so we strip /quakejs-ws/
+        location /quakejs-ws/ {
+            proxy_pass https://localhost:8080/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 86400s;
+            proxy_send_timeout 86400s;
+            proxy_connect_timeout 75s;
+            proxy_buffering off;
+            proxy_ssl_verify off;
+            proxy_ssl_server_name off;
+        }
+
         # Tic-Tac-Toe location commented out
         # location /tictactoe/ {
         #     alias {{ web_game_dir }}/tictactoe/;

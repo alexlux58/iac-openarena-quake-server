@@ -3,3 +3,8 @@
 web_game_port: 80
 web_game_dir: /var/www/html
 nginx_user: nginx
+
+# QuakeJS Docker container configuration
+quakejs_server_name: "QuakeJS on AWS"
+quakejs_max_clients: 8
+quakejs_gametype: 0  # 0=Free For All, 1=Tournament, 2=Single Player, 3=Team Deathmatch, 4=Capture The Flag

@@ -1,23 +1,33 @@
-version: '3.8'
 services:
-  quakejs:
-    image: mazaclub/quakejs:latest
-    container_name: quakejs
+  lobby:
+    image: "{{ quakejs_docker_image | default('sayterdarkwoulf/quakejs:latest') }}"
+    container_name: quakejs-lobby
     ports:
-      - "8080:8080"
-      - "27960:27960/udp"
+      - "8080:8080"  # Map host 8080 to container 8080 (WSS/WebSocket - proxies to server)
+      - "8081:443"   # Map host 8081 to container 443 (HTTPS static files)
     volumes:
       - ./baseoa:/opt/quakejs/baseoa
       - ./missionpack:/opt/quakejs/missionpack
-    environment:
-      - SERVER_NAME={{ oa_sv_hostname | default('OpenArena on AWS') }}
-      - MAX_CLIENTS={{ oa_max_clients | default(8) }}
-      - GAME_TYPE={{ oa_gametype | default(0) }}
+      - ./certs:/certs:ro
+    depends_on:
+      - quakejs
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      test: ["CMD-SHELL", "wget --no-check-certificate --spider -q https://localhost:443/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  quakejs:
+    image: "{{ quakejs_server_image | default('quakejs-docker-quakejs:latest') }}"
+    container_name: quakejs-server
+    expose:
+      - "8080"  # Internal only - lobby nginx proxies to this via service name 'quakejs'
+    volumes:
+      - ./baseoa:/opt/quakejs/baseoa:ro
+    environment:
+      - SERVER_PORT=8080
+    restart: unless-stopped
+    # No healthcheck needed - lobby will handle it
 

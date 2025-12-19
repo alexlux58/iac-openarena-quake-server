@@ -51,5 +51,6 @@ popd >/dev/null
 
 echo "Public IP: ${PUBLIC_IP}"
 echo "FQDN:      ${FQDN}"
-echo "Connect:   ${FQDN}:27960"
+echo "Game Menu: http://${FQDN}"
+echo "QuakeJS:   http://${FQDN}/quakejs/"
 

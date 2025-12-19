@@ -77,6 +77,9 @@
 - name: Deploy Asteroids game
   ansible.builtin.include_tasks: deploy-asteroids.yml
 
+- name: Deploy QuakeJS game
+  ansible.builtin.include_tasks: docker-quakejs.yml
+
 # Tic-Tac-Toe game commented out due to YAML parsing error
 # - name: Deploy Tic-Tac-Toe game
 #   ansible.builtin.include_tasks: deploy-tictactoe.yml
