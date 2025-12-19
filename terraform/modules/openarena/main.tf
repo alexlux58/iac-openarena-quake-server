@@ -232,6 +232,22 @@ resource "cloudflare_record" "games" {
   name    = var.cloudflare_subdomain # e.g., "games"
   type    = "A"                      # IPv4 address record
   content = aws_eip.this.public_ip   # Point to the Elastic IP
-  ttl     = var.cloudflare_ttl       # DNS cache TTL in seconds
+  # Cloudflare requires TTL to be 1 when proxied is true
+  ttl     = 1                        # Must be 1 when proxied=true (Cloudflare requirement)
   proxied = true                     # Enable Cloudflare proxy for free SSL/HTTPS
+}
+
+# Cloudflare Page Rule to set SSL mode to Flexible for games subdomain
+# This allows the root domain (alexflux.com) to use Full/Full Strict for Vercel
+# while games.alexflux.com uses Flexible SSL for the EC2 instance
+resource "cloudflare_page_rule" "games_ssl_flexible" {
+  count = local.cloudflare_enabled ? 1 : 0
+
+  zone_id  = var.cloudflare_zone_id
+  target   = "${var.cloudflare_subdomain}.${var.cloudflare_zone_name}/*"
+  priority = 1
+
+  actions {
+    ssl = "flexible" # Set SSL mode to Flexible for games subdomain
+  }
 }
